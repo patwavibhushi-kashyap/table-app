@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getDatabase } from "firebase/database";
+import { getDatabase, type Database } from "firebase/database";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -11,6 +11,13 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-
-export const db = getDatabase(app);
+// Firebase must never initialise during server-side rendering or build-time
+// static generation — only in the browser, where `NEXT_PUBLIC_*` env vars are
+// guaranteed to be inlined and a real `window` exists. Every consumer of `db`
+// only calls it from inside event handlers/effects (never at module scope or
+// during render), so it's always defined by the time it's actually used.
+export const db = (
+  typeof window !== "undefined"
+    ? getDatabase(getApps().length ? getApp() : initializeApp(firebaseConfig))
+    : undefined
+) as Database;
